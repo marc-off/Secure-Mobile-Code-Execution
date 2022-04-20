@@ -17,15 +17,15 @@ type expr =
   | Var of ide
   | Op of op * expr * expr
   | If of expr * expr * expr
-  | Let of ide * expr * expr
+  | Let of ide * expr * expr * Env.PermSet.t
   (* Extended the semantics of function evaluation to include the notion of domain, inside which the function is defined *)
-  | Fun of ide * expr * Code.domain 
+  | Fun of ide * expr
   (* Extended the semantics of function call, to include the domain of the called function *)
-  | Call of expr * expr * Code.domain 
-  | Read (* Read operation *)
-  | Write (* Write operation *)
-  | Send (* Send Operation *)
-	| Delete (* Delete Operation *)
+  | Call of expr * expr
+  (* | Read Read operation *)
+  (* | Write Write operation *)
+  (* | Send Send Operation *)
+	(* | Delete Delete Operation *)
 ;;
 
 
@@ -33,5 +33,5 @@ type expr =
 type value = 
   | Int of int 
   | Bool of bool
-  | Closure of  (ide*expr*Code.domain*value Env.env)
+  | Closure of  (ide*expr*value Env.env)
 ;;

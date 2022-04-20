@@ -12,8 +12,14 @@ end)
 type 'v env = (string * 'v * PermSet.t) list 
 (* Initializing the environment, which is set to empty *)
 let emptyenv = [];;
+(* Semantic of lookup abstracting from permissions provided, as if ran with root perms *)
+let rec lookup_root (e: 'v env) (x: string) =
+  match e with 
+    | [] -> failwith "Binding not found!"
+    | (ide, value, perms)::r -> if x = ide then value else lookup_root r x
+;;
 (* Semantic of lookup is restricted to the set of perms provided *)
-let rec lookup (e:'v env) (x: string) (p: PermSet.t)  = 
+let rec lookup_sandboxed (e:'v env) (x: string) (p: PermSet.t)  = 
   match e with 
   | [] -> failwith "Not found"
   | (ide, value, perms)::r -> if x = ide then 
