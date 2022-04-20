@@ -1,0 +1,8 @@
+(executable
+ (name homework)
+ (libraries
+  ast
+  code
+  env
+  interpreter
+  policy))
