@@ -1,0 +1,4 @@
+(lang dune 3.0)
+(name homework)
+(sections (lib .) (doc ../../doc/homework))
+(files (lib (META dune-package opam)) (doc (README.md)))

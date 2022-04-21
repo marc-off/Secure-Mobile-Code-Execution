@@ -1,0 +1,14 @@
+(** @canonical Lib.Ast *)
+module Ast = Lib__Ast
+
+
+(** @canonical Lib.Code *)
+module Code = Lib__Code
+
+
+(** @canonical Lib.Env *)
+module Env = Lib__Env
+
+
+(** @canonical Lib.Interpreter *)
+module Interpreter = Lib__Interpreter
