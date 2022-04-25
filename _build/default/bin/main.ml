@@ -19,12 +19,12 @@ let _permset_AB =
 	|> List.fold_right Lib.Env.PermSet.add ["A"; "B"]
 ;;
 (* permset_BC = {B, C} *)
-let permset_BC = 
+let _permset_BC = 
 	Lib.Env.PermSet.empty
 	|> List.fold_right Lib.Env.PermSet.add ["B"; "C"]
 ;;
 (* permset_AC = {A, C} *)
-let _permset_AC = 
+let permset_AC = 
 	Lib.Env.PermSet.empty
 	|> List.fold_right Lib.Env.PermSet.add ["A"; "C"]
 ;;
@@ -33,16 +33,17 @@ let permset_ABC =
 	Lib.Env.PermSet.empty
 	|> List.fold_right Lib.Env.PermSet.add ["A"; "B"; "C"]
 ;;
-(* Function for formatting the battery test *)
+(* Function for formatting the battery test, ensuring that the real output matches the expected one *)
 let format_test tpair = match tpair with
 	| (a, b) -> match b with
-		| None -> if a="FAIL" then Printf.printf "OK Test\n" else Printf.printf "FAIL Test\n"
-		| Some _v -> if a="OK" then Printf.printf "OK Test\n" else Printf.printf "FAIL Test\n"
+		| None -> if a="ABORT" then Printf.printf "OK test\n" else Printf.printf "ERROR test\n"
+		| Some _v -> if a="OK" then Printf.printf "OK test\n" else Printf.printf "ERROR test\n"
 ;;
-(*  *)
+(* Given an expression 'e' and some set of permissions 'p', it encapsulates the result of an interpreter evaluation.
+	When the evaluation aborts ('failwith' case), it will return a None value, otherwise a Some 'v value. *)
 let debug e p =
   try Some (e p) with
-    Failure(_x) -> None
+    | Failure(x) -> let _print = Printf.printf "%s\n" x in None 
 ;;
 (* Expression translated in Ocaml syntax: let x = 2 in let y = 3 in let sum_xyz z = z + x + y in sum_xyz 5 
    At time of permission check, Stack should be like this:
@@ -53,18 +54,18 @@ let debug e p =
     |---------|-----------|---------|
     Output expected should be 10 *)
 
-let expression = 
-		Lib.Ast.Let("x", Eint(2), 
-							Let("y", Eint(3), 
-								Let("sum_xyz", 
-									Fun("z", Op(Sum, Var("z"), Op(Sum, Var("x"), Var("y")))), 
-									Call(Var("sum_xyz"), Eint(5)),
-								permset_C), 
-							permset_B), 
-						permset_A)
-in
-let runtest = Lib.Interpreter.sandbox_eval expression Lib.Env.emptyenv
-in List.map (debug runtest) [permset_C; permset_BC; permset_ABC]
-	|> List.combine ["FAIL"; "FAIL"; "OK"]
+let sandbox_expr = 
+	Lib.Ast.Let("x", Eint(2), 
+						Let("y", Eint(3), 
+							Let("sum_xyz", 
+								Fun("z", Op(Sum, Var("z"), Op(Sum, Var("x"), Var("y")))), 
+								Call(Var("sum_xyz"), Eint(5)),
+							permset_C), 
+						permset_B), 
+					permset_A)
+	|> Lib.Interpreter.sandbox_eval Lib.Env.emptyenv
+	|> debug 
+in List.map (sandbox_expr) [permset_C; permset_A; permset_AC; permset_ABC]
+	|> List.combine ["ABORT"; "ABORT"; "ABORT"; "OK"]
 	|> List.iter format_test
 ;;
