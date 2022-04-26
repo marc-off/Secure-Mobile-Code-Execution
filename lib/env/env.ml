@@ -12,7 +12,7 @@ let rec lookup_root (e: 'v env) (x: string) =
     | (ide, value, _domain)::r -> if x = ide then value else lookup_root r x
 ;;
 (* Semantic of lookup restricted to the definition of a domain for each resource in the stack – note that lookup and read are the same op! *)
-let rec lookup_sandboxed (e:'v env) (x: string) (d: Code.domain)  = 
+let rec lookup_sandboxed (e:'v env) (d: Code.domain) (x: string) = 
   match e with 
   | [] -> failwith "Not found"
   | (ide, value, domain)::r -> if x = ide then 

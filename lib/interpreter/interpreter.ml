@@ -131,44 +131,60 @@ The following changes are made to eval to accomodate for the new security policy
   adding variables and code for their native execution and failure handling
  *)
 
-let rec eval (env: Ast.value Env.env) (trace: Security_policy.event list) (policies: Security_policy.policy list) (sandbox: bool) (expr:exp)  =
-  match expr with
-  |Eint(n) -> Int n
-  |Ebool b -> Bool b
-  |Fun(x, body) -> Closure(x,body,env)
-  |Den x -> if sandbox then x |> Env.lookup env else x CON PERMESSI |> Env.lookup local_env CON PERMESSI
-  |If(e1,e2,e3) ->
-    (match e1 |> eval env trace policies sandbox with
-     | Bool true -> eval env trace policies sandbox e2
-     | Bool false -> eval env trace policies sandbox e3
-     | _ -> failwith "If guard must evaluate to a boolean")
-  |Let(id, e1, e2) -> let v1 = e1 |> eval env trace policies sandbox in
-    let add_t = get_trace e1 in
-    e2 |> eval ((id,v1)|> if sandbox then Env.bind env else Env.bind local_env) (trace @ add_t) policies sandbox
-  |Binop(op,e1,e2) -> (
-      let e1 = eval env trace policies sandbox e1 in
-      let e2 = eval env trace policies sandbox e2 in
-      match op,e1,e2 with
-      | Sum,Int n1, Int n2 -> Int (n1+n2)
-      | Times,Int n1, Int n2 -> Int (n1 * n2)
-      | Minus,Int n1, Int n2 -> Int (n1-n2)
-      | Equal, Int n1, Int n2 -> Bool (n1 = n2)
-      | Less, Int n1, Int n2 -> Bool (n1 < n2)
-      | Greater, Int n1, Int n2 -> Bool (n1 > n2)
-      | _ -> failwith "Invalid binary expression")
-  |Call(f, arg) -> (match eval env trace policies sandbox f with
-      | Closure(x,body,env) -> (let x_val = arg |> eval env trace policies sandbox in
+let rec eval 
+            (env: Ast.value Env.env) 
+            (trace: Security_policy.event list) 
+            (policies: Security_policy.policy list) 
+            (sandbox: bool) 
+            (domain : Code.domain)
+            (exp : expr)  =
+  match exp with
+  | CstTrue -> Bool(true)
+  | CstFalse -> Bool(false)
+  | Eint(n) -> Int(n)
+  | Var(i) -> if sandbox then x |> Env.lookup_sandboxed env domain else x |> Env.lookup_root local_env 
+  | Op(o, m1, m2) -> (
+      let v1 = eval env trace policies domain sandbox e1 in
+      let v2 = eval env trace policies domain sandbox e2 in
+        match (o , m1, m2) with
+        | Sum, Int(i1), Int(i2) -> Int(i1+i2)
+        | Minus, Int(i1), Int(i2) -> Int(i1-i2)
+        | Times, Int(i1), Int(i2) -> Int(i1*i2)
+        | Equal, Int(i1), Int(i2) -> Bool(i1=i2)
+        | Less, Int(i1), Int(i2) -> Bool(i1<i2)
+        | Greater, Int(i1), Int(i2) -> Bool(i1>i2)
+        | _, _, _ -> failwith ("Pattern matching of Op not recognized"))
+  |Let(id, e1, e2, d) -> (
+    let new_val = e1 |> eval env trace policies domain sandbox in
+    let add_trace = get_trace e1 in
+    e2 |> eval ( (id, new_val, domain) |> if sandbox then Env.bind env else local_env = Env.bind local_env) (trace @ add_trace) policies sandbox domain
+  |If(g, e1, e2) -> (
+    let guard = g |> eval env trace policies sandbox domain with
+    match guard with
+    | Bool(true) -> e1 |> eval env trace policies sandbox domain
+    | Bool(false) -> e2 |> eval env trace policies sandbox domain
+    | _ -> failwith "Evaluation of If-guard lead to uncompatible type!")
+  |Fun(id, e) -> if sandbox then Closure(id, e, local_env) else Closure(id, e, env)
+  |Call(f, arg) -> (
+    let value_f = f |> eval env trace policies sandbox domain in
+    let value_arg = arg |> eval env trace policies sandbox domain in
+      match value_f with
+      | Closure(param, body, env) -> (
         let add_t = get_trace arg in
-          body |> eval ((x, x_val) |> if sandbox then Env.bind env else Env.bind local_env) (trace @ add_t) policies)
-      | _ -> failwith "Not calling a function")
+        body |> eval ( (param, value_arg, domain) |> if sandbox then Env.bind env else local_env = Env.bind local_env) (trace @ add_t) policies domain)
+      | _ -> failwith "A function is required on the left side of the call.")
   (* Read Write Open does not do any concrete operation to simplify reasoning *)
-  | Read x -> if (Lib.Policy.check_policies (trace @ [Security_policy.Read]) policies) then Bool true
-                  else failwith "Invalid read"
-  | Write x -> if (Lib.Policy.check_policies (trace @ [Security_policy.Write]) policies) then Bool true
+  | Read(id) -> (
+    if (Lib.Policy.check_policies (trace @ [Security_policy.Read]) policies) then 
+      let ret_value = Env.check_perms env id domain Read in
+        match ret_value with
+        | bool, msg -> let _print = Printf.printf "%s\n" msg in Bool(bool)
+    else failwith "Invalid read"
+  | Write(id) -> if (Lib.Policy.check_policies (trace @ [Security_policy.Write]) policies) then Bool true
                   else failwith "Invalid write"
-  | Open x -> if (Lib.Policy.check_policies (trace @ [Security_policy.Open]) policies) then Bool true 
+  | Open(id) -> if (Lib.Policy.check_policies (trace @ [Security_policy.Open]) policies) then Bool true 
                   else failwith "Invalid open"
-  | Send x -> if (Lib.Policy.check_policies (trace @ [Security_policy.Send]) policies) then Bool true
+  | Send(id) -> if (Lib.Policy.check_policies (trace @ [Security_policy.Send]) policies) then Bool true
                   else failwith "Invalid send"
 
 (* Main *)
