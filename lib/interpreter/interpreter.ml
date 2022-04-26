@@ -17,9 +17,9 @@ let rec eval (env : Ast.value Env.env) (exp : expr) =
 				| Less, Int(i1), Int(i2) -> Bool(i1<i2)
 				| Greater, Int(i1), Int(i2) -> Bool(i1>i2)
 				| _, _, _ -> failwith ("Pattern matching of Op not recognized"))
-    | Let(id, e1, e2, p) -> (
+    | Let(id, e1, e2, _d) -> (
       let new_val = eval env e1 in
-      let new_env = Env.bind env id new_val p in
+      let new_env = Env.bind env id new_val Code.emptyDomain in
         eval new_env e2)
     | If(g, e1, e2) -> (
       let guard = eval env g in
@@ -36,12 +36,12 @@ let rec eval (env : Ast.value Env.env) (exp : expr) =
       match value_f with
         | Closure (param, body, closure_env) ->
           (* Extend the environment by assigning the argument to the parameter name *) 
-          let new_env = Env.bind closure_env param value_arg Code.PermSet.empty in
+          let new_env = Env.bind closure_env param value_arg Code.emptyDomain in
           eval new_env body
         | _ -> failwith "A function is required on the left side of the call.")
-    | Read (id) -> Bool(true)
-    | Write (id) -> Bool(true)
-    | Send (id) -> Bool(true)
+    | Read (_id) -> Bool(true)
+    | Write (_id) -> Bool(true)
+    | Send (_id) -> Bool(true)
 ;;
 (* Evaluation of an expression restricted to the notion of sanbox *)
 let rec sandbox_eval (env : Ast.value Env.env) (exp : expr) (domain : Code.domain) = 
@@ -61,9 +61,9 @@ let rec sandbox_eval (env : Ast.value Env.env) (exp : expr) (domain : Code.domai
         | Less, Int(i1), Int(i2) -> Bool(i1<i2)
         | Greater, Int(i1), Int(i2) -> Bool(i1>i2)
         | _, _, _ -> failwith ("Pattern matching of Op not recognized"))
-    | Let(id, e1, e2, p) -> (
-      let new_val = sandbox_eval env e1 domain in
-      let new_env = Env.bind env id new_val p in
+    | Let(id, e1, e2, d) -> (
+      let new_val = sandbox_eval env e1 d in
+      let new_env = Env.bind env id new_val d in
         sandbox_eval new_env e2 domain)
     | If(g, e1, e2) -> (
       let guard = sandbox_eval env g domain in
@@ -80,16 +80,19 @@ let rec sandbox_eval (env : Ast.value Env.env) (exp : expr) (domain : Code.domai
     match value_f with
       | Closure (param, body, closure_env) ->
         (* Extend the environment by assigning the argument to the parameter name *) 
-        let new_env = Env.bind closure_env param value_arg Code.PermSet.empty in
+        let new_env = Env.bind closure_env param value_arg Code.emptyDomain in
         sandbox_eval new_env body domain
       | _ -> failwith "A function is required on the left side of the call.")
-    | Read (id) -> let ret_value = check_perms env id domain Read in
+    | Read (id) -> (let ret_value = Env.check_perms env id domain Read in
       match ret_value with
       | bool, msg -> let _print = Printf.printf "%s\n" msg in Bool(bool)
-    | Write (id) -> let ret_value = check_perms env id domain Write in 
+    )
+    | Write (id) -> (let ret_value = Env.check_perms env id domain Write in 
       match ret_value with
       | bool, msg -> let _print = Printf.printf "%s\n" msg in Bool(bool)
-    | Send (id) -> let ret_value = check_perms env id domain Send in
+    )
+    | Send (id) -> (let ret_value = Env.check_perms env id domain Send in
       match ret_value with
       | bool, msg -> let _print = Printf.printf "%s\n" msg in Bool(bool)
+    )
 ;;

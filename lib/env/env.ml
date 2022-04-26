@@ -23,15 +23,14 @@ let rec lookup_sandboxed (e:'v env) (x: string) (d: Code.domain)  =
 (* Checkup for the permissions of a certain resource in the stack, returning state of the exit + message *)
 let rec check_perms (e:'v env) (x: string) (d: Code.domain) (prim_op: Code.primitive) = 
   match e with 
-  | [] -> (false, "Resource "^ide^" not found in the stack")
-  | (ide, value, domain)::r -> if x = ide then match prim_op with
-    | Read -> if Code.PermSet.subset domain.read_perms d.read_perms then (true, "Read OK - Value of "^ide^" is: "^val) 
+  | [] -> (false, "Resource "^x^" not found in the stack")
+  | (ide, _value, domain)::r -> if x = ide then match prim_op with
+    | Read -> if Code.PermSet.subset domain.read_perms d.read_perms then (true, "Read OK") 
               else (false, "Not enough permissions for reading resource "^ide)
-    | Write -> if Code.PermSet.subset domain.write_perms d.write_perms then (true, "Write OK - Value of "^ide^" is: "^val) 
+    | Write -> if Code.PermSet.subset domain.write_perms d.write_perms then (true, "Write OK") 
               else (false, "Not enough permissions for writing resource "^ide)
-    | Send -> if Code.PermSet.subset domain.send_perms d.send_perms then (true, "Send OK - Value of "^ide^" is: "^val) 
+    | Send -> if Code.PermSet.subset domain.send_perms d.send_perms then (true, "Send OK") 
     else (false, "Not enough permissions for sending resource "^ide)
-    | _ -> (false, "Unrecognized type of primitive operation with resource "^x)
   else check_perms r x d prim_op
 ;;
 (* We bind each variable to a value and a domain limiting its access *)

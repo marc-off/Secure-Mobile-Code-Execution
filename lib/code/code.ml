@@ -14,16 +14,11 @@ type domain = {
   send_perms : PermSet.t;
 }
 ;;
-(* 
-let grantResPerm (dom : domain) (perm : PermSet.elt) : domain = {
-  url = dom.url;
-  (* f_perms = dom.f_perms; *)
-  r_perms = PermSet.add perm dom.r_perms
-} 
-;; *)
-(* let grantFilePerm (dom : domain) (perm : file_perm) : domain = {
-  url = dom.url;
-  f_perms = perm::dom.f_perms;
-  r_perms = dom.r_perms
-}  *)
+let emptyDomain : domain = {
+  url="";
+  read_perms=PermSet.empty;
+  write_perms=PermSet.empty;
+  send_perms=PermSet.empty;
+}
+;;
 

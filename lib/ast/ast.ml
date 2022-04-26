@@ -12,7 +12,7 @@ type expr =
   | Var of ide
   | Op of op * expr * expr
   | If of expr * expr * expr
-  | Let of ide * expr * expr * Code.PermSet.t
+  | Let of ide * expr * expr * Code.domain
   (* Extended the semantics of function evaluation to include the notion of domain, inside which the function is defined *)
   | Fun of ide * expr
   (* Extended the semantics of function call, to include the domain of the called function *)

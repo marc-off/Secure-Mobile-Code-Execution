@@ -1,26 +1,24 @@
-(* Set of basic operations concerning files – reading, writing, deleting and sending. *)
-(* type file_ops = Read | Write | Delete | Send *)
-(* Permissions for interacting with files, represented as the right to perform some actions over some files *)
-(* type file_perm = (string * file_ops) *)
+(* These are the primitives, abstracting from operations with resources, for which we define a set of permissions *)
+type primitive = Read | Write | Send
 ;;
-(* A mobile code is restricted to a domain, which specifies for the code (tagged by a specific url in Java-style)
- a set of file permissions and resource permissions *)
+(* Every primitive operations with a resource is protected by a set of required permissions – 
+    for simplicity, perms will be rappresented by a tag *)
+module PermSet = Set.Make(String)
+;;
+(* Each mobile code is assigned to a domain, enabling for the code (tagged by a specific url in Java-style)
+ a set of permissions for primitive operations *)
 type domain = {
   url : string;
-  (* f_perms : file_perm list; *)
-  r_perms : Env.PermSet.t;
+  read_perms : PermSet.t;
+  write_perms : PermSet.t;
+  send_perms : PermSet.t;
 }
 ;;
-
-let grantResPerm (dom : domain) (perm : Env.PermSet.elt) : domain = {
-  url = dom.url;
-  (* f_perms = dom.f_perms; *)
-  r_perms = Env.PermSet.add perm dom.r_perms
-} 
-
-(* let grantFilePerm (dom : domain) (perm : file_perm) : domain = {
-  url = dom.url;
-  f_perms = perm::dom.f_perms;
-  r_perms = dom.r_perms
-}  *)
+let emptyDomain : domain = {
+  url="";
+  read_perms=PermSet.empty;
+  write_perms=PermSet.empty;
+  send_perms=PermSet.empty;
+}
+;;
 
