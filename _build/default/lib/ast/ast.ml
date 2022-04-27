@@ -5,7 +5,7 @@ type ide = string
 type op = Sum | Minus | Times | Equal | Less | Greater
 ;;
 (* Abstract Syntax of a program *)
-type expr = 
+type expr =
   | CstTrue
 	| CstFalse
 	| Eint of int
@@ -19,12 +19,12 @@ type expr =
   | Call of expr * expr
   | Read of ide (* Read operation *)
   | Write of ide (* Write operation *)
+  | Open of ide (* Open operation *)
   | Send of ide (* Send Operation *)
-	(* | Delete Delete Operation *)
 ;;
 (* Evaluation of AST brings to these specific values *)
-type value = 
-  | Int of int 
+type value =
+  | Int of int
   | Bool of bool
   | Closure of  (ide*expr*value Env.env)
 ;;

@@ -37,15 +37,15 @@ let permset_ABC =
 	 associated to them in the sandbox context. *)
 let (domains: Lib.Code.domain list) = [
 	{url = "https://www.ryanair.com/";
-		read_perms = permset_A; write_perms = permset_C; send_perms = permset_AC};
+		read_perms = permset_A; write_perms = permset_C; open_perms = permset_C; send_perms = permset_AC};
 	{url = "https://www.google.it/";
-		read_perms = permset_B; write_perms = permset_A; send_perms = permset_AB};
+		read_perms = permset_B; write_perms = permset_A; open_perms = permset_A; send_perms = permset_AB};
 	{url = "https://www.amazon.it/";
-		read_perms = permset_C; write_perms = permset_AC; send_perms = permset_BC};
+		read_perms = permset_C; write_perms = permset_AC; open_perms = permset_AC; send_perms = permset_BC};
 	{url = "https://www.apple.com/it/";
-		read_perms = permset_ABC; write_perms = permset_C; send_perms = permset_A};
+		read_perms = permset_ABC; write_perms = permset_C; open_perms = permset_C; send_perms = permset_A};
 	{url = "https://www.microsoft.com/";
-		read_perms = permset_BC; write_perms = permset_A; send_perms = permset_A};
+		read_perms = permset_BC; write_perms = permset_A; open_perms = permset_A; send_perms = permset_A};
 ];;
 (* Function for formatting the battery test, ensuring that the real output matches the expected one *)
 let format_test tpair = match tpair with
@@ -64,9 +64,9 @@ let format_test tpair = match tpair with
 ;;
 (* Given an expression 'e' and some set of permissions 'p', it encapsulates the result of our interpreter.
 	When the evaluation of our expression aborts ('failwith' case), it will return a None value, otherwise a Some 'v value. *)
-let encapsulate_eval e p =
+let encapsulate_eval e =
   try 
-		let encapsulate = Some (e p) in let _print = Printf.printf "Permissions provided satisfied any check\n" in encapsulate
+		let encapsulate = Some (e) in let _print = Printf.printf "Permissions provided satisfied any check\n" in encapsulate
 	with
     | Failure(x) -> let _print = Printf.printf "%s\n" x in None 
 ;;
@@ -82,40 +82,85 @@ let encapsulate_eval e p =
     Output expected should be 10 
 *)
 let expression = 
-	Lib.Ast.Let("x", Eint(2), 
+	(* Lib.Ast.Let("x", Eint(2), 
 						Let("y", Eint(3), 
 							Let("sum_xyz", 
 								Fun("z", Op(Sum, Var("z"), Op(Sum, Var("y"), Var("x")))), 
 								Call(Var("sum_xyz"), Eint(5)),
 							List.nth domains 2), 
 						List.nth domains 1), 
-					List.nth domains 0)
+					List.nth domains 0) *)
+	Lib.Ast.Let("x", 
+				Eint(2), 
+				Let("y", 
+					Var("x"), 
+					Let("sum",
+						Fun("z", Op(Sum, Var("z"), Var("y"))),
+						Let(
+							"x", 
+							Eint(6), 
+							Call(Var("sum"), Eint(5)), 
+							List.nth domains 0
+						),
+						List.nth domains 0
+					), 
+					List.nth domains 0
+				), 
+				List.nth domains 0
+			) 
 (*
 	We call now the 'eval' function, given the expression before, restricted to the semantics of the defined sandbox.
 *)
-	|> Lib.Interpreter.sandbox_eval Lib.Env.emptyenv
+	|> Lib.Interpreter.eval Lib.Env.emptyenv [] [] true (List.nth domains 1)
 (* 
 	The sandboxed 'eval' is now given as input to the defined funtion 'encapsulate_eval', which encapsulates the 
 	returned value and handles the 'failwith' calls, which in turn return the 'Failure' type value.
 *)
-	|> encapsulate_eval 
+	|> encapsulate_eval
+in [("OK", expression)]
+	|> List.iter format_test
+;;
+
 (* 
 	The 'encapsulate_eval' function now is an input of the List.map function, which we remember to act in this way:
 	List.map f [a1;a2;a3;…;an] -> [f a1;f a2;f a3;…;f an].
 	The only missing argument for 'encapsulate_eval' is the permissions required for the 'sandbox_eval', which
 	are indeed in the last argument of the List.map function.
 *)
-in let _exec_test = List.map (expression) [List.nth domains 2; List.nth domains 1; List.nth domains 4; List.nth domains 3]
+(* in let _exec_test = List.map (expression) [List.nth domains 2; List.nth domains 1; List.nth domains 4; List.nth domains 3] *)
 (* 
 	Since the 'encapsulate_eval' returns either a None type value or a Some type value, we will obtain a list 
 	of None-Some type values. Now, we combine each element with another element, obtaining a list of pairs
 	where the first is a 'label' which is the expected result of the test cases, and the second is a None/Some value type
 *)
-	|> List.combine ["ABORT"; "ABORT"; "ABORT"; "OK"]
+	(* |> List.combine ["ABORT"; "ABORT"; "ABORT"; "OK"] *)
 (* 
 	Finally, we format the pairs in way that we can print out the results of our test.
 *)
-	|> List.iter format_test
+	(* |> List.iter format_test *)
 (* This is the equivalent to the usual 'return 0' at the end of a C main *)
-in true
+(* in true *)
 ;;
+
+(* let get_result exp =
+  try
+    exp
+    |> eval [] [] []
+    |> Option.some
+  with
+    Failure _ -> None
+
+let only_one_open =
+  let m_delta state event =  match state,event with
+    | 0, Policy.Open -> Some 1
+    | 1, Policy.Open -> Some 2
+    | n, _ -> Some n
+  in
+  {
+    Policy.states=[0;1;2];
+    init_state=0;
+    delta=m_delta;
+    accept_states=[0;1]
+
+  } *)
+

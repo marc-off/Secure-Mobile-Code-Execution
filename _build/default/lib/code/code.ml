@@ -1,5 +1,5 @@
 (* These are the primitives, abstracting from operations with resources, for which we define a set of permissions *)
-type primitive = Read | Write | Send
+type primitive = Read | Write | Open | Send
 ;;
 (* Every primitive operations with a resource is protected by a set of required permissions – 
     for simplicity, perms will be rappresented by a tag *)
@@ -11,6 +11,7 @@ type domain = {
   url : string;
   read_perms : PermSet.t;
   write_perms : PermSet.t;
+  open_perms : PermSet.t;
   send_perms : PermSet.t;
 }
 ;;
@@ -18,6 +19,7 @@ let emptyDomain : domain = {
   url="";
   read_perms=PermSet.empty;
   write_perms=PermSet.empty;
+  open_perms=PermSet.empty;
   send_perms=PermSet.empty;
 }
 ;;

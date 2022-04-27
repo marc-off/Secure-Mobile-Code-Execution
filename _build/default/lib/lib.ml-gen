@@ -12,3 +12,7 @@ module Env = Lib__Env
 
 (** @canonical Lib.Interpreter *)
 module Interpreter = Lib__Interpreter
+
+
+(** @canonical Lib.Policy *)
+module Policy = Lib__Policy
