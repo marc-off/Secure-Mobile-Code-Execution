@@ -2,4 +2,4 @@
 
 (library
  (name lib)
- (modules ast code env interpreter policy))
+ (modules ast code env interpreter policy execute))

@@ -1,54 +1,5 @@
-(* permset_A = {A} *)
-let permset_A = 
-	Lib.Code.PermSet.empty
-	|> Lib.Code.PermSet.add "A"
-;;
-(* permset_B = {B} *)
-let permset_B = 
-	Lib.Code.PermSet.empty
-	|> Lib.Code.PermSet.add "B"
-;;
-(* permset_C = {C} *)
-let permset_C = 
-	Lib.Code.PermSet.empty
-	|> Lib.Code.PermSet.add "C"
-;;
-(* permset_AB = {A, B} *)
-let permset_AB = 
-	Lib.Code.PermSet.empty
-	|> List.fold_right Lib.Code.PermSet.add ["A"; "B"]
-;;
-(* permset_BC = {B, C} *)
-let permset_BC = 
-	Lib.Code.PermSet.empty
-	|> List.fold_right Lib.Code.PermSet.add ["B"; "C"]
-;;
-(* permset_AC = {A, C} *)
-let permset_AC = 
-	Lib.Code.PermSet.empty
-	|> List.fold_right Lib.Code.PermSet.add ["A"; "C"]
-;;
-(* permset_ABC = {A, B, C} *)
-let permset_ABC = 
-	Lib.Code.PermSet.empty
-	|> List.fold_right Lib.Code.PermSet.add ["A"; "B"; "C"]
-;;
-(* We define a set of domains, which represent the mobile code origin and especially the permissions
-	 associated to them in the sandbox context. *)
-let (domains: Lib.Code.domain list) = [
-	{url = "https://www.ryanair.com/";
-		read_perms = permset_A; write_perms = permset_C; open_perms = permset_C; send_perms = permset_AC};
-	{url = "https://www.google.it/";
-		read_perms = permset_B; write_perms = permset_A; open_perms = permset_A; send_perms = permset_AB};
-	{url = "https://www.amazon.it/";
-		read_perms = permset_C; write_perms = permset_AC; open_perms = permset_AC; send_perms = permset_BC};
-	{url = "https://www.apple.com/it/";
-		read_perms = permset_ABC; write_perms = permset_C; open_perms = permset_C; send_perms = permset_A};
-	{url = "https://www.microsoft.com/";
-		read_perms = permset_BC; write_perms = permset_A; open_perms = permset_A; send_perms = permset_A};
-];;
 (* Function for formatting the battery test, ensuring that the real output matches the expected one *)
-let format_test tpair = match tpair with
+let _format_test tpair = match tpair with
 	| (a, b) -> let _expected_res = Printf.printf "EXPECTED RES: %s - " a in match b with
 		| None -> (
 			if a="ABORT" then Printf.printf "OK TEST: execution aborted as expected!\n" 
@@ -62,13 +13,54 @@ let format_test tpair = match tpair with
 			else Printf.printf "ERROR test (computation labelled as 'ABORT' returned a value instead)\n"
 		)
 ;;
-(* Given an expression 'e' and some set of permissions 'p', it encapsulates the result of our interpreter.
-	When the evaluation of our expression aborts ('failwith' case), it will return a None value, otherwise a Some 'v value. *)
-let encapsulate_eval e =
-  try 
-		let encapsulate = Some (e) in let _print = Printf.printf "Permissions provided satisfied any check\n" in encapsulate
-	with
-    | Failure(x) -> let _print = Printf.printf "%s\n" x in None 
+
+let _no_write_after_read = 
+  let m_delta state event = 
+    match state,event with
+    | 0,Lib.Policy.Read -> Some 1 
+    | 1, Lib.Policy.Write -> Some 2 
+    | 0, Lib.Policy.Write -> Some 0 
+    | 1,Lib.Policy.Read -> Some 1 
+    | 2, _ -> Some 2 
+    | n, Lib.Policy.Open -> Some n
+    | _ -> failwith "Invalid transition"
+  in Lib.Execute.add_policy
+  [{
+    states=[0;1;2];
+    init_state=0;
+    delta=m_delta;
+    accept_states=[0;1]
+
+  }]
+;;
+let _only_one_open = 
+  let m_delta state event =  match state,event with 
+    | 0,Lib.Policy.Open -> Some 1
+    | 1, Lib.Policy.Open -> Some 2 
+    | n, _ -> Some n 
+  in Lib.Execute.add_policy
+  [{
+    states=[0;1;2];
+    init_state=0;
+    delta=m_delta;
+    accept_states=[0;1]
+
+  }]
+;;
+let _no_write_allowed = 
+  let m_delta state event =  match state,event with 
+    | 0,Lib.Policy.Write -> Some 1
+    | n, _ -> Some n 
+  in Lib.Execute.add_policy
+  [{
+    states=[0;1;];
+    init_state=0;
+    delta=m_delta;
+    accept_states=[0;]
+
+  }]
+;;
+let _setdom = Lib.Execute.set_domain (List.nth Lib.Code.domains 0)
 ;;
 (* 
 	Expression translated in Ocaml syntax: let x = 2 in let y = 3 in let sum_xyz z = z + y + x in sum_xyz 5.
@@ -81,46 +73,78 @@ let encapsulate_eval e =
     |---------|-----------|---------|
     Output expected should be 10 
 *)
-let expression = 
-	(* Lib.Ast.Let("x", Eint(2), 
-						Let("y", Eint(3), 
-							Let("sum_xyz", 
-								Fun("z", Op(Sum, Var("z"), Op(Sum, Var("y"), Var("x")))), 
-								Call(Var("sum_xyz"), Eint(5)),
-							List.nth domains 2), 
-						List.nth domains 1), 
-					List.nth domains 0) *)
-	Lib.Ast.Let("x", 
-				Eint(2), 
-				Let("y", 
-					Var("x"), 
-					Let("sum",
-						Fun("z", Op(Sum, Var("z"), Var("y"))),
-						Let(
-							"x", 
-							Eint(6), 
-							Call(Var("sum"), Eint(5)), 
-							List.nth domains 0
-						),
-						List.nth domains 0
-					), 
-					List.nth domains 0
-				), 
-				List.nth domains 0
-			) 
+let _bindrandom = 
+	Lib.Ast.Let("x", Eint(2), Var("x"), List.nth Lib.Code.domains 0)
+	|> Lib.Interpreter.eval (Lib.Interpreter.my_env) [] [] false (List.nth Lib.Code.domains 3)
+;;
+let _callexec = 
+	Lib.Ast.Var("x")
+	|> Lib.Execute.execute
+(* ;;
+let _expressions = [
+	(* BAD *)
+	(Lib.Ast.Let("x", Eint(2), 
+				Let("y", Eint(3), 
+					Let("sum_xyz", Fun("z", Op(Sum, Var("z"), Op(Sum, Var("y"), Var("x")))), Call(Var("sum_xyz"), Eint(5)),
+					List.nth Lib.Code.domains 2), 
+				List.nth Lib.Code.domains 1), 
+			List.nth Lib.Code.domains 0)
+	);
+	(* GOOD *)
+	(Lib.Ast.Let("x", Eint(2), 
+						Let("y", Var("x"), 
+							Let("sum", Fun("z", Op(Sum, Var("z"), Var("y"))),
+								Let("x", Eint(6), Call(Var("sum"), Eint(5)), 
+								List.nth Lib.Code.domains 0),
+							List.nth Lib.Code.domains 0), 
+					List.nth Lib.Code.domains 0), 
+				List.nth Lib.Code.domains 0)
+	);
+	(* GOOD *)
+	(Lib.Ast.Let("add_3",Fun("n",Op(Sum,Var("n"),Eint(3))),Call(Var("add_3"),Eint(5)),
+						List.nth Lib.Code.domains 0)
+	);
+	(* BAD: policy *)
+  (Lib.Ast.Let("x",Read("f"),Write("f"),
+						List.nth Lib.Code.domains 0)
+	);
+  (* BAD: policy *)
+  (Lib.Ast.Let("x",Write("f"),Read("f"),
+					List.nth Lib.Code.domains 2)
+	);
+  (* BAD: policy *)
+  (Lib.Ast.Let("x",Eint(2),Write("f"),
+					List.nth Lib.Code.domains 3)
+	);
+  (* GOOD *)
+  (Lib.Ast.Let("x",Eint(2),Read("f"),
+					List.nth Lib.Code.domains 3)
+	);
+	(* BAD: policy *)
+  (Lib.Ast.Let("x",Open("f"),Open("f2"),
+					List.nth Lib.Code.domains 1)
+	);
+  (* OK *)
+  (Lib.Ast.Let("x",Open("f"),Read("f"),
+					List.nth Lib.Code.domains 0)
+	)
+]
 (*
 	We call now the 'eval' function, given the expression before, restricted to the semantics of the defined sandbox.
 *)
-	|> Lib.Interpreter.eval Lib.Env.emptyenv [] [] true (List.nth domains 1)
+	|> List.map Lib.Execute.execute 
+	(* We assign to each round of execute (returning a Some/None type value) a label, which is the expected result
+		"OK" -> Some value
+		"ABORT" -> None *)
+	|> List.combine ["ABORT"; "OK"; "OK"; "ABORT"; "ABORT"; "ABORT"; "OK"; "ABORT"; "OK"]
+
+	|> List.map format_test
+;;
+
 (* 
 	The sandboxed 'eval' is now given as input to the defined funtion 'encapsulate_eval', which encapsulates the 
 	returned value and handles the 'failwith' calls, which in turn return the 'Failure' type value.
 *)
-	|> encapsulate_eval
-in [("OK", expression)]
-	|> List.iter format_test
-;;
-
 (* 
 	The 'encapsulate_eval' function now is an input of the List.map function, which we remember to act in this way:
 	List.map f [a1;a2;a3;…;an] -> [f a1;f a2;f a3;…;f an].
@@ -139,28 +163,4 @@ in [("OK", expression)]
 *)
 	(* |> List.iter format_test *)
 (* This is the equivalent to the usual 'return 0' at the end of a C main *)
-(* in true *)
-;;
-
-(* let get_result exp =
-  try
-    exp
-    |> eval [] [] []
-    |> Option.some
-  with
-    Failure _ -> None
-
-let only_one_open =
-  let m_delta state event =  match state,event with
-    | 0, Policy.Open -> Some 1
-    | 1, Policy.Open -> Some 2
-    | n, _ -> Some n
-  in
-  {
-    Policy.states=[0;1;2];
-    init_state=0;
-    delta=m_delta;
-    accept_states=[0;1]
-
-  } *)
-
+in true *)

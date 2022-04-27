@@ -10,6 +10,10 @@ module Code = Lib__Code
 module Env = Lib__Env
 
 
+(** @canonical Lib.Execute *)
+module Execute = Lib__Execute
+
+
 (** @canonical Lib.Interpreter *)
 module Interpreter = Lib__Interpreter
 

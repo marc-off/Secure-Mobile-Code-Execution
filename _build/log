@@ -1,11 +1,11 @@
-# dune build ./main.exe
+# dune exec ./main.exe
 # OCAMLPARAM: unset
 # Shared cache: disabled
 # Workspace root:
 # "/Users/defra/Library/CloudStorage/OneDrive-UniversityofPisa/Language-Based
 # Technology for Security/[OCAML] Laboratorio/homework"
 # Auto-detected concurrency: 8
-$ /Users/defra/.opam/default/bin/ocamlc.opt -config > /var/folders/sk/7ngf_95s3kb_697pzt19gf8r0000gn/T/dune_d4336a_output
+$ /Users/defra/.opam/default/bin/ocamlc.opt -config > /var/folders/sk/7ngf_95s3kb_697pzt19gf8r0000gn/T/dune_b1952e_output
 # Dune context:
 #  { name = "default"
 #  ; kind = "default"
@@ -114,11 +114,5 @@ $ /Users/defra/.opam/default/bin/ocamlc.opt -config > /var/folders/sk/7ngf_95s3k
 #      ; windows_unicode = false
 #      }
 #  }
-$ (cd _build/default && /Users/defra/.opam/default/bin/ocamldep.opt -modules -impl lib/interpreter/interpreter.ml) > _build/default/lib/.lib.objs/interpreter.ml.d
-$ (cd _build/default && /Users/defra/.opam/default/bin/ocamlc.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -bin-annot -I lib/.lib.objs/byte -no-alias-deps -opaque -open Lib -o lib/.lib.objs/byte/lib__Interpreter.cmo -c -impl lib/interpreter/interpreter.ml)
-> File "lib/interpreter/interpreter.ml", line 64, characters 59-66:
-> 64 |         let _bind = (param, value_arg, domain) |> Env.bind (stack) in
->                                                                 ^^^^^^^
-> Error: This expression has type unit but an expression was expected of type
->          'a Env.env
-[2]
+$ (cd _build/default && /Users/defra/.opam/default/bin/ocamlopt.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -I bin/.main.eobjs/byte -I bin/.main.eobjs/native -I lib/.lib.objs/byte -I lib/.lib.objs/native -intf-suffix .ml -no-alias-deps -opaque -o bin/.main.eobjs/native/dune__exe__Main.cmx -c -impl bin/main.ml)
+$ (cd _build/default && /Users/defra/.opam/default/bin/ocamlopt.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -o bin/main.exe lib/lib.cmxa bin/.main.eobjs/native/dune__exe__Main.cmx)

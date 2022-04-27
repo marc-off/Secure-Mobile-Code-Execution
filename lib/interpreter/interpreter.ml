@@ -11,6 +11,17 @@ let get_trace expr =
 (*  *)
 let my_env : Ast.value Env.env = {state=[]}
 ;; 
+(*  *)
+let format_env (my_e : Ast.value Env.env) = 
+  let scan_row row =  
+    match row with 
+    | (id, v, _) -> 
+      match v with
+      | Int(i) -> Printf.printf "Identifier: %s - Value: %i\n" id i 
+      | Bool(b) -> Printf.printf "Identifier: %s - Value: %B\n" id b
+      | Closure(id', _, _) -> Printf.printf "Identifier: %s - Value: %s\n" id id'
+  in List.map scan_row my_e.state
+;;
 (*
 The following changes are made to eval to accomodate for the new security policy:
 
@@ -20,20 +31,21 @@ The following changes are made to eval to accomodate for the new security policy
   This is a very simple but inefficient way to check them, since the automata gets entirely rerun at every operation. An optimization would be to inline the automatas as code directly,
   adding variables and code for their native execution and failure handling
  *)
-let rec eval 
+let rec eval
+            (env : Ast.value Env.env)
             (trace : Policy.event list) 
             (policies : Policy.policy list) 
             (sandbox : bool) 
             (domain : Code.domain)
-            (exp : expr)  =
+            (exp : Ast. expr)  =
   match exp with
   | CstTrue -> Bool(true)
   | CstFalse -> Bool(false)
   | Eint(n) -> Int(n)
-  | Var(i) -> if sandbox then i |> Env.lookup_sandboxed my_env domain else i |> Env.lookup_root my_env 
+  | Var(i) -> if sandbox then i |> Env.lookup_sandboxed env domain else i |> Env.lookup_root env 
   | Op(o, m1, m2) -> (
-      let v1 = m1 |> eval trace policies sandbox domain in
-      let v2 = m2 |> eval trace policies sandbox domain in
+      let v1 = m1 |> eval env trace policies sandbox domain in
+      let v2 = m2 |> eval env trace policies sandbox domain in
         match (o , v1, v2) with
         | Sum, Int(i1), Int(i2) -> Int(i1+i2)
         | Minus, Int(i1), Int(i2) -> Int(i1-i2)
@@ -43,24 +55,24 @@ let rec eval
         | Greater, Int(i1), Int(i2) -> Bool(i1>i2)
         | _, _, _ -> failwith ("Pattern matching of Op not recognized"))
   |Let(id, e1, e2, d) -> (
-    let new_val = e1 |> eval trace policies sandbox domain in
+    let new_val = e1 |> eval env trace policies sandbox domain in
     let add_trace = get_trace e1 in
-    let _bind = (id, new_val, d) |> Env.bind my_env in  
-    e2 |> eval (trace @ add_trace) policies sandbox domain)
+    let _bind = (if sandbox then ignore(0) else (id, new_val, d) |> Env.bind_local my_env) in
+    e2 |> eval ((id, new_val, d) |> Env.bind env) (trace @ add_trace) policies sandbox domain)
   |If(g, e1, e2) -> (
-    let guard = g |> eval trace policies sandbox domain in
+    let guard = g |> eval env trace policies sandbox domain in
     match guard with
-    | Bool(true) -> e1 |> eval trace policies sandbox domain
-    | Bool(false) -> e2 |> eval trace policies sandbox domain
+    | Bool(true) -> e1 |> eval env trace policies sandbox domain
+    | Bool(false) -> e2 |> eval env trace policies sandbox domain
     | _ -> failwith "Evaluation of If-guard lead to uncompatible type!")
-  |Fun(id, e) -> Closure(id, e, my_env)
+  |Fun(id, e) -> Closure(id, e, env)
   |Call(f, arg) -> (
-    let value_f = f |> eval trace policies sandbox domain in
-    let value_arg = arg |> eval trace policies sandbox domain in
+    let value_f = f |> eval env trace policies sandbox domain in
+    let value_arg = arg |> eval env trace policies sandbox domain in
       match value_f with
       | Closure(param, body, env) -> (
         let add_t = get_trace arg in
-        body |> eval ( (param, value_arg, domain) |> Env.bind env) (trace @ add_t) policies sandbox domain)
+        body |> eval ((param, value_arg, domain) |> Env.bind env) (trace @ add_t) policies sandbox domain)
       | _ -> failwith "A function is required on the left side of the call.")
   (* Read Write Open does not do any concrete operation to simplify reasoning *)
   | Read(id) -> 
@@ -96,4 +108,5 @@ let rec eval
       else Bool(true)
     else failwith "Invalid send"
 ;;
+
 

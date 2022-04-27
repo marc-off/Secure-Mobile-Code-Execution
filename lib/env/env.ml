@@ -35,5 +35,8 @@ let rec check_perms (e:'v env) (x: string) (d: Code.domain) (prim_op: Code.primi
   else check_perms {state=r} x d prim_op
 ;;
 (* We bind each variable to a value and a domain limiting its access *)
-let bind (env:'v env) (x, v, d) = env.state <- (x,v,d)::env.state
+let bind_local (env:'v env) (x, v, d) = env.state <- (x,v,d)::env.state
+;;
+(* We bind each variable to a value and a domain limiting its access *)
+let bind (env:'v env) (x, v, d) = {state=(x,v,d)::env.state}
 ;;
