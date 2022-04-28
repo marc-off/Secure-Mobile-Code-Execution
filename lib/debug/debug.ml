@@ -5,7 +5,7 @@ let format_env (my_e : Ast.value Env.env) =
     match row with 
     | (id, (v: Ast.value), (d: Code.domain)) -> 
     let print_ide = "Identifier: "^id 
-    and print_perms = List.fold_left (fun l1 l2 -> l1^l2) String.empty in
+    and print_perms = List.fold_left (fun l1 l2 -> l1^l2) " " in
     let print_rperms = (Code.PermSet.elements d.read_perms) |> print_perms
     and print_wperms = (Code.PermSet.elements d.write_perms) |> print_perms
     and print_operms = (Code.PermSet.elements d.open_perms) |> print_perms
