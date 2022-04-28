@@ -1,4 +1,8 @@
-# Homework Assignment 1 – Language-Based Technology for Security - A.A. 2021/2022
+# Homework Assignment 1 – Language-Based Technology for Security - CyberSecurity Course UNIPI -  A.A. 2021/2022
+
+## ***Authors : Marco Fresco & Emanuele Urselli***
+
+***
 
 ## In this homework, you will design a simple functional language having primitive abstractions for securing the execution of mobile code. Mobile code is a programming approach where programs are considered as data, and therefore are accessible, transmitted, and evaluated. In this assignment, we refer to mobile code as software that travels on a heterogeneous network, crossing protection domains, and automatically executed upon arrival at the destination. Protection domains can be as big as corporate clouds and as small as smartphones
 
@@ -6,9 +10,12 @@
 
 ***
 
-#### In this project, we created a simple functional programming language and the related interpreter. There is only one interpreter 'eval', but it takes one more parameter, called 'sandbox'. This one, allow it to distinguish two modes of operation:  
+#### In this project, we created a simple functional programming language and the related interpreter. There is only one interpreter 'eval', but it takes one more parameter, called 'sandbox'. This one, allow it to distinguish two modes of operation:
+
 * Basic interpreter
+
 * Sandbox
+
 #### There is a global environment, in which are saved the triples (identifier, value, domain). The main difference between the basic interpreter and the sandbox is that for the first one, every modify and/or access operation related to the environment is allowed, instead, for the sandbox (when the flag is set) the operations related to the environment are restricted. In this last case, the bind operations have effects only in the sandbox scope and at the end of the mobile code evaluation, the global environment will not be modified, compared to the environment passed as an argument at the beginning of the evaluation. The sandbox mode is executed with a domain thath could be changed through a runtime function. Moreover, every attempt to access the global environment will be subjected to checks that will verify that the domain of permissions with which the sandbox is executed is a superset of the domain associated with the element of the environment to which it wants to access.
 
 
