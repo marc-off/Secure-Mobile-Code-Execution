@@ -5,7 +5,7 @@
 type state = int
 ;;
 (*
-  We assume to have three relevant events to control within our polices: Read operations, Write operations and Open operations.
+  We assume to have four relevant events to control within our polices: Read operations, Write operations, Open operations and Send operations.
   In this implementation these are tied to the homonymous ast nodes but it is not necessary (for example they could be tied to library functions with that functionality.)
   In a more complex implementation we would let events to be user defined, but for simplicity i chose to fix them)
 *)

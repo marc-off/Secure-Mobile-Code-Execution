@@ -12,10 +12,9 @@ type expr =
   | Var of ide
   | Op of op * expr * expr
   | If of expr * expr * expr
+  (* Extended the semantics of a Let, to define the permissions for accessing a variable *)
   | Let of ide * expr * expr * Code.domain
-  (* Extended the semantics of function evaluation to include the notion of domain, inside which the function is defined *)
   | Fun of ide * expr
-  (* Extended the semantics of function call, to include the domain of the called function *)
   | Call of expr * expr
   | Read of ide (* Read operation *)
   | Write of ide (* Write operation *)
