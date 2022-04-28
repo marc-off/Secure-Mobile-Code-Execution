@@ -25,7 +25,7 @@ let rec eval
       let v1 = m1 |> eval env trace policies sandbox domain in
       let v2 = m2 |> eval env trace policies sandbox domain in
         match (o , v1, v2) with
-        | Sum, Int(i1), Int(i2) -> Int(i1+i2)
+        | Sum, Int(i1), Int(i2) -> Int(i1+i2) 
         | Minus, Int(i1), Int(i2) -> Int(i1-i2)
         | Times, Int(i1), Int(i2) -> Int(i1*i2)
         | Equal, Int(i1), Int(i2) -> Bool(i1=i2)
