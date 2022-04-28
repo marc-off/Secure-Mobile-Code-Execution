@@ -1,8 +1,8 @@
 open Ast
 (* Instantiation of the local environment, which saves the bindings from each evaluation of an expression *)
 let my_env : Ast.value Env.env = {state=[]}
-;; 
-(*
+;;
+(* 
   The definition of our eval function has been tweaked with respect to the new features of sandboxing.
 
   - We still take as parameters both trace of events and the policies restricting the evaluation.
