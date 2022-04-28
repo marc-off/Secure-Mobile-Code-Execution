@@ -43,6 +43,6 @@ let rec check_perms (e:'v env) (x: string) (d: Code.domain) (prim_op: Code.primi
 let bind_local (env:'v env) (x, v, d) = env.state <- (x,v,d)::env.state
 ;;
 (* We bind the variable to a value and a domain limiting its access. 
-  Returns a COPY of the environment passed as argument, with the new binding. *)
+  Returns a COPY of the environment passed as argument, with the new binding in the COPY, without altering the original state. *)
 let bind_temp (env:'v env) (x, v, d) = {state=(x,v,d)::env.state}
 ;;

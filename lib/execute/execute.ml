@@ -34,5 +34,5 @@ let execute (exp: Ast.expr) =
     |> Interpreter.eval Interpreter.my_env [] my_plc.value true my_dom.value
     |> Option.some
   with 
-    | Failure(x) -> let _print = Printf.printf "%s\n" x in None 
+    | Failure(x) -> let _print = Printf.printf "%s\n" x in None
 ;;

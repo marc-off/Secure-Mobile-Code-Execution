@@ -20,13 +20,14 @@ let rec eval
   | CstTrue -> Bool(true)
   | CstFalse -> Bool(false)
   | Eint(n) -> Int(n)
+  (* The 'sandbox' flag influences the lookup of the occurrence to determine whether checking of permissions is introduced or not *)
   | Var(i) -> if sandbox then i |> Env.lookup_sandboxed env domain else i |> Env.lookup_root env 
   | Op(o, m1, m2) -> (
       let v1 = m1 |> eval env trace policies sandbox domain in
       let v2 = m2 |> eval env trace policies sandbox domain in
         match (o , v1, v2) with
-        | Sum, Int(i1), Int(i2) -> Int(i1+i2) 
-        | Minus, Int(i1), Int(i2) -> Int(i1-i2)
+        | Sum, Int(i1), Int(i2) -> Int(i1+i2)
+        | Minus, Int(i1), Int (i2) -> Int(i1-i2)
         | Times, Int(i1), Int(i2) -> Int(i1*i2)
         | Equal, Int(i1), Int(i2) -> Bool(i1=i2)
         | Less, Int(i1), Int(i2) -> Bool(i1<i2)
@@ -34,8 +35,9 @@ let rec eval
         | _, _, _ -> failwith ("Pattern matching of Op not recognized"))
   |Let(id, e1, e2, d) -> (
     let new_val = e1 |> eval env trace policies sandbox domain in
-    let add_trace = Policy.get_trace e1 in
-    let _bind = (if sandbox then ignore(0) else (id, new_val, d) |> Env.bind_local my_env) in
+    let add_trace = Policy.get_trace e1 
+    (* When the 'sandbox' flag is true, binding is not saved in our local environment *)
+    and () = (if sandbox then ignore(0) else (id, new_val, d) |> Env.bind_local my_env) in
     e2 |> eval ((id, new_val, d) |> Env.bind_temp env) (trace @ add_trace) policies sandbox domain)
   |If(g, e1, e2) -> (
     let guard = g |> eval env trace policies sandbox domain in
@@ -52,37 +54,49 @@ let rec eval
         let add_t = Policy.get_trace arg in
         body |> eval ((param, value_arg, domain) |> Env.bind_temp env) (trace @ add_t) policies sandbox domain)
       | _ -> failwith "A function is required on the left side of the call.")
-  (* Read Write Open does not do any concrete operation to simplify reasoning *)
+  (* Read | Write | Open | Send operation semantics are not implemented concretely, only to the extent of our purposes (check of policies and perms) *)
   | Read(id) -> 
     if (Policy.check_policies (trace @ [Policy.Read]) policies) then 
       if sandbox then
-        let ret_value = Env.check_perms my_env id domain Read in
+        let ret_value = Env.check_perms env id domain Read in
           match ret_value with
-          | bool, msg -> let _print = Printf.printf "%s\n" msg in Bool(bool)
+          | bool, msg -> 
+          let () = Printf.printf "%s\n" msg 
+            and ret = (if bool then Bool(bool) else failwith msg)
+            in ret
       else Bool(true)
     else failwith "Invalid read"
   | Write(id) -> 
     if (Policy.check_policies (trace @ [Policy.Write]) policies) then
       if sandbox then
-        let ret_value = Env.check_perms my_env id domain Write in
+        let ret_value = Env.check_perms env id domain Write in
           match ret_value with
-          | bool, msg -> let _print = Printf.printf "%s\n" msg in Bool(bool)
+          | bool, msg -> 
+            let () = Printf.printf "%s\n" msg 
+            and ret = (if bool then Bool(bool) else failwith msg)
+            in ret
       else Bool(true)
     else failwith "Invalid write"
   | Open(id) -> 
     if (Policy.check_policies (trace @ [Policy.Open]) policies) then 
       if sandbox then
-        let ret_value = Env.check_perms my_env id domain Open in
+        let ret_value = Env.check_perms env id domain Open in
           match ret_value with
-          | bool, msg -> let _print = Printf.printf "%s\n" msg in Bool(bool)
+          | bool, msg -> 
+            let () = Printf.printf "%s\n" msg 
+              and ret = (if bool then Bool(bool) else failwith msg)
+              in ret
       else Bool(true)
     else failwith "Invalid open"
   | Send(id) -> 
     if (Policy.check_policies (trace @ [Policy.Send]) policies) then 
       if sandbox then
-        let ret_value = Env.check_perms my_env id domain Send in
+        let ret_value = Env.check_perms env id domain Send in
           match ret_value with
-          | bool, msg -> let _print = Printf.printf "%s\n" msg in Bool(bool)
+          | bool, msg -> 
+            let () = Printf.printf "%s\n" msg 
+            and ret = (if bool then Bool(bool) else failwith msg)
+            in ret
       else Bool(true)
     else failwith "Invalid send"
 ;;

@@ -1,23 +1,25 @@
 
 (*
-We model security policies as automatas.
+  We model security policies as automatas.
 *)
 type state = int
 ;;
 (*
-We assume to have three relevant events to control within our polices: Read operations, Write operations and Open operations.
-In this implementation these are tied to the homonymous ast nodes but it is not necessary (for example they could be tied to library functions with that functionality.)
- In a more complex implementation we would let events to be user defined, but for simplicity i chose to fix them)
- *)
+  We assume to have three relevant events to control within our polices: Read operations, Write operations and Open operations.
+  In this implementation these are tied to the homonymous ast nodes but it is not necessary (for example they could be tied to library functions with that functionality.)
+  In a more complex implementation we would let events to be user defined, but for simplicity i chose to fix them)
+*)
 type event =
   | Read
   | Write
   | Open
   | Send
 ;;
-(* the automata associated to a policy. The transition relation is provided by the user.  In a real language, we would
-   have a way to transform a higher level syntax maybe internal to the language itself to an automata. For simplicity i assumed
-   that this step is already done*)
+(* 
+  The automata associated to a policy. The transition relation is provided by the user.  In a real language, we would
+  have a way to transform a higher level syntax maybe internal to the language itself to an automata. For simplicity i assumed
+  that this step is already done
+*)
 type policy = {
   states: state list;
   init_state: state ;
