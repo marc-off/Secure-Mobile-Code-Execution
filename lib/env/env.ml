@@ -1,16 +1,20 @@
 open Code
-(* An environment is characterized by an identifier, a generic type 'v and a domain which restricts accesses *)
+(* 
+  An environment is characterized by 3-tuples of an identifier, a generic type 'v and a domain which restricts accesses to the variable.
+  The implementation of the type 'env' has been changed to accomodate the definition of a local environment, where the bindings are not 
+    restricted to the evaluation of an expression, but remain as references for successive 'execute' calls (see example in the consegna).
+*)
 type 'v env = {
   mutable state : (string * 'v * Code.domain) list 
 }
 ;;
-(* Semantic of lookup abstracting from notion of domain, as if ran with root perms *)
+(* Semantic of lookup in an environment abstracting from notion of domain, as if ran with root perms *)
 let rec lookup_root (e: 'v env) (x: string) =
   match e.state with 
     | [] -> failwith "Binding not found!"
     | (ide, value, _domain)::r -> if x = ide then value else lookup_root {state=r} x
 ;;
-(* Semantic of lookup restricted to the definition of a domain for each resource in the stack – note that lookup and read are the same op! *)
+(* Semantic of lookup restricted to the definition of a domain for each resource in the stack – note that lookup counts as a read op! *)
 let rec lookup_sandboxed (e:'v env) (d: Code.domain) (x: string) = 
   match e.state with 
   | [] -> failwith "Binding not found"
@@ -34,9 +38,11 @@ let rec check_perms (e:'v env) (x: string) (d: Code.domain) (prim_op: Code.primi
               else (false, "Not enough permissions for sending resource "^ide)
   else check_perms {state=r} x d prim_op
 ;;
-(* We bind each variable to a value and a domain limiting its access *)
+(* We bind the variable to a value and a domain limiting its access. 
+  Returns the environment passed as argument, with the new binding *)
 let bind_local (env:'v env) (x, v, d) = env.state <- (x,v,d)::env.state
 ;;
-(* We bind each variable to a value and a domain limiting its access *)
-let bind (env:'v env) (x, v, d) = {state=(x,v,d)::env.state}
+(* We bind the variable to a value and a domain limiting its access. 
+  Returns a COPY of the environment passed as argument, with the new binding. *)
+let bind_temp (env:'v env) (x, v, d) = {state=(x,v,d)::env.state}
 ;;

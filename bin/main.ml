@@ -1,30 +1,32 @@
+open Lib
+open Printf
 (* Function for formatting the battery test, ensuring that the real output matches the expected one *)
 let _format_test tpair = match tpair with
-	| (a, b) -> let _expected_res = Printf.printf "EXPECTED RES: %s - " a in match b with
+	| (a, b) -> let _expected_res = printf "EXPECTED RES: %s - " a in match b with
 		| None -> (
-			if a="ABORT" then Printf.printf "OK TEST: execution aborted as expected!\n" 
-				else Printf.printf "ERROR test (computation labelled as 'OK' returned no value)\n"
+			if a="ABORT" then printf "OK TEST: execution aborted as expected!\n" 
+				else printf "ERROR test (computation labelled as 'OK' returned no value)\n"
 		)
 		| Some v -> (
 			if a="OK" then let ok_string = "OK TEST: the returned value is" in match v with
-				| Lib.Ast.Int(n) -> Printf.printf "%s: %i\n" ok_string n
-				| Lib.Ast.Bool(b) -> Printf.printf "%s: %B\n" ok_string b
-				| Lib.Ast.Closure(id, _exp, _env) -> Printf.printf "%s the closure: %s\n" ok_string id
-			else Printf.printf "ERROR test (computation labelled as 'ABORT' returned a value instead)\n"
+				| Ast.Int(n) -> printf "%s: %i\n" ok_string n
+				| Ast.Bool(b) -> printf "%s: %B\n" ok_string b
+				| Ast.Closure(id, _exp, _env) -> printf "%s the closure: %s\n" ok_string id
+			else printf "ERROR test (computation labelled as 'ABORT' returned a value instead)\n"
 		)
 ;;
 
 let _no_write_after_read = 
   let m_delta state event = 
     match state,event with
-    | 0,Lib.Policy.Read -> Some 1 
-    | 1, Lib.Policy.Write -> Some 2 
-    | 0, Lib.Policy.Write -> Some 0 
-    | 1,Lib.Policy.Read -> Some 1 
+    | 0,Policy.Read -> Some 1 
+    | 1, Policy.Write -> Some 2 
+    | 0, Policy.Write -> Some 0 
+    | 1,Policy.Read -> Some 1 
     | 2, _ -> Some 2 
-    | n, Lib.Policy.Open -> Some n
+    | n, Policy.Open -> Some n
     | _ -> failwith "Invalid transition"
-  in Lib.Execute.add_policy
+  in Execute.add_policy
   [{
     states=[0;1;2];
     init_state=0;
@@ -35,10 +37,10 @@ let _no_write_after_read =
 ;;
 let _only_one_open = 
   let m_delta state event =  match state,event with 
-    | 0,Lib.Policy.Open -> Some 1
-    | 1, Lib.Policy.Open -> Some 2 
+    | 0,Policy.Open -> Some 1
+    | 1, Policy.Open -> Some 2 
     | n, _ -> Some n 
-  in Lib.Execute.add_policy
+  in Execute.add_policy
   [{
     states=[0;1;2];
     init_state=0;
@@ -49,9 +51,9 @@ let _only_one_open =
 ;;
 let _no_write_allowed = 
   let m_delta state event =  match state,event with 
-    | 0,Lib.Policy.Write -> Some 1
+    | 0,Policy.Write -> Some 1
     | n, _ -> Some n 
-  in Lib.Execute.add_policy
+  in Execute.add_policy
   [{
     states=[0;1;];
     init_state=0;
@@ -60,7 +62,7 @@ let _no_write_allowed =
 
   }]
 ;;
-let _setdom = Lib.Execute.set_domain (List.nth Lib.Code.domains 0)
+let _setdom = Execute.set_domain (List.nth Code.domains 1)
 ;;
 (* 
 	Expression translated in Ocaml syntax: let x = 2 in let y = 3 in let sum_xyz z = z + y + x in sum_xyz 5.
@@ -74,65 +76,68 @@ let _setdom = Lib.Execute.set_domain (List.nth Lib.Code.domains 0)
     Output expected should be 10 
 *)
 let _bindrandom = 
-	Lib.Ast.Let("x", Eint(2), Var("x"), List.nth Lib.Code.domains 0)
-	|> Lib.Interpreter.eval (Lib.Interpreter.my_env) [] [] false (List.nth Lib.Code.domains 3)
+	Ast.Let("x", Eint(2), Var("x"), List.nth Code.domains 0)
+	|> Interpreter.eval (Interpreter.my_env) [] [] false (List.nth Code.domains 3)
+;;
+let _a = Debug.format_env Interpreter.my_env
 ;;
 let _callexec = 
-	Lib.Ast.Var("x")
-	|> Lib.Execute.execute
+	Ast.Var("x")
+	|> Execute.execute
+;; 
 (* ;;
 let _expressions = [
 	(* BAD *)
-	(Lib.Ast.Let("x", Eint(2), 
+	(Ast.Let("x", Eint(2), 
 				Let("y", Eint(3), 
 					Let("sum_xyz", Fun("z", Op(Sum, Var("z"), Op(Sum, Var("y"), Var("x")))), Call(Var("sum_xyz"), Eint(5)),
-					List.nth Lib.Code.domains 2), 
-				List.nth Lib.Code.domains 1), 
-			List.nth Lib.Code.domains 0)
+					List.nth Code.domains 2), 
+				List.nth Code.domains 1), 
+			List.nth Code.domains 0)
 	);
 	(* GOOD *)
-	(Lib.Ast.Let("x", Eint(2), 
+	(Ast.Let("x", Eint(2), 
 						Let("y", Var("x"), 
 							Let("sum", Fun("z", Op(Sum, Var("z"), Var("y"))),
 								Let("x", Eint(6), Call(Var("sum"), Eint(5)), 
-								List.nth Lib.Code.domains 0),
-							List.nth Lib.Code.domains 0), 
-					List.nth Lib.Code.domains 0), 
-				List.nth Lib.Code.domains 0)
+								List.nth Code.domains 0),
+							List.nth Code.domains 0), 
+					List.nth Code.domains 0), 
+				List.nth Code.domains 0)
 	);
 	(* GOOD *)
-	(Lib.Ast.Let("add_3",Fun("n",Op(Sum,Var("n"),Eint(3))),Call(Var("add_3"),Eint(5)),
-						List.nth Lib.Code.domains 0)
+	(Ast.Let("add_3",Fun("n",Op(Sum,Var("n"),Eint(3))),Call(Var("add_3"),Eint(5)),
+						List.nth Code.domains 0)
 	);
 	(* BAD: policy *)
-  (Lib.Ast.Let("x",Read("f"),Write("f"),
-						List.nth Lib.Code.domains 0)
+  (Ast.Let("x",Read("f"),Write("f"),
+						List.nth Code.domains 0)
 	);
   (* BAD: policy *)
-  (Lib.Ast.Let("x",Write("f"),Read("f"),
-					List.nth Lib.Code.domains 2)
+  (Ast.Let("x",Write("f"),Read("f"),
+					List.nth Code.domains 2)
 	);
   (* BAD: policy *)
-  (Lib.Ast.Let("x",Eint(2),Write("f"),
-					List.nth Lib.Code.domains 3)
+  (Ast.Let("x",Eint(2),Write("f"),
+					List.nth Code.domains 3)
 	);
   (* GOOD *)
-  (Lib.Ast.Let("x",Eint(2),Read("f"),
-					List.nth Lib.Code.domains 3)
+  (Ast.Let("x",Eint(2),Read("f"),
+					List.nth Code.domains 3)
 	);
 	(* BAD: policy *)
-  (Lib.Ast.Let("x",Open("f"),Open("f2"),
-					List.nth Lib.Code.domains 1)
+  (Ast.Let("x",Open("f"),Open("f2"),
+					List.nth Code.domains 1)
 	);
   (* OK *)
-  (Lib.Ast.Let("x",Open("f"),Read("f"),
-					List.nth Lib.Code.domains 0)
+  (Ast.Let("x",Open("f"),Read("f"),
+					List.nth Code.domains 0)
 	)
 ]
 (*
 	We call now the 'eval' function, given the expression before, restricted to the semantics of the defined sandbox.
 *)
-	|> List.map Lib.Execute.execute 
+	|> List.map Execute.execute 
 	(* We assign to each round of execute (returning a Some/None type value) a label, which is the expected result
 		"OK" -> Some value
 		"ABORT" -> None *)

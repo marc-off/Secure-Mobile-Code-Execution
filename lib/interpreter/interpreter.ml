@@ -1,35 +1,13 @@
 open Ast
-(*  *)
-let get_trace expr =
-  match expr with
-  | Read _ -> [Policy.Read]
-  | Write _ -> [Policy.Write]
-  | Open _ -> [Policy.Open]
-  | Send _ -> [Policy.Send]
-  | _ -> []
-;;
-(*  *)
+(* Instantiation of the local environment, which saves the bindings from each evaluation of an expression *)
 let my_env : Ast.value Env.env = {state=[]}
 ;; 
-(*  *)
-let format_env (my_e : Ast.value Env.env) = 
-  let scan_row row =  
-    match row with 
-    | (id, v, _) -> 
-      match v with
-      | Int(i) -> Printf.printf "Identifier: %s - Value: %i\n" id i 
-      | Bool(b) -> Printf.printf "Identifier: %s - Value: %B\n" id b
-      | Closure(id', _, _) -> Printf.printf "Identifier: %s - Value: %s\n" id id'
-  in List.map scan_row my_e.state
-;;
 (*
-The following changes are made to eval to accomodate for the new security policy:
+  The definition of our eval function has been tweaked with respect to the new features of sandboxing.
 
-  - we take as parameter the trace of events and the list of security policies to check
-  - the trace of events is used to keep track of relevant actions to check in security policies
-  - Read, Write and open operations are checked to ensure they do not violate security policies. The check consists of evaluating the automata with the current execution trace.
-  This is a very simple but inefficient way to check them, since the automata gets entirely rerun at every operation. An optimization would be to inline the automatas as code directly,
-  adding variables and code for their native execution and failure handling
+  - We still take as parameters both trace of events and the policies restricting the evaluation.
+  - We take also a 'sandbox' flag: when 'true', takes in account the checking of permissions for accessing resources.
+  - It also takes the 'domain' of the current code, which will be assigned to the local bindings and, eventually, compared for checking of permissions.
  *)
 let rec eval
             (env : Ast.value Env.env)
@@ -56,9 +34,9 @@ let rec eval
         | _, _, _ -> failwith ("Pattern matching of Op not recognized"))
   |Let(id, e1, e2, d) -> (
     let new_val = e1 |> eval env trace policies sandbox domain in
-    let add_trace = get_trace e1 in
+    let add_trace = Policy.get_trace e1 in
     let _bind = (if sandbox then ignore(0) else (id, new_val, d) |> Env.bind_local my_env) in
-    e2 |> eval ((id, new_val, d) |> Env.bind env) (trace @ add_trace) policies sandbox domain)
+    e2 |> eval ((id, new_val, d) |> Env.bind_temp env) (trace @ add_trace) policies sandbox domain)
   |If(g, e1, e2) -> (
     let guard = g |> eval env trace policies sandbox domain in
     match guard with
@@ -71,8 +49,8 @@ let rec eval
     let value_arg = arg |> eval env trace policies sandbox domain in
       match value_f with
       | Closure(param, body, env) -> (
-        let add_t = get_trace arg in
-        body |> eval ((param, value_arg, domain) |> Env.bind env) (trace @ add_t) policies sandbox domain)
+        let add_t = Policy.get_trace arg in
+        body |> eval ((param, value_arg, domain) |> Env.bind_temp env) (trace @ add_t) policies sandbox domain)
       | _ -> failwith "A function is required on the left side of the call.")
   (* Read Write Open does not do any concrete operation to simplify reasoning *)
   | Read(id) -> 
